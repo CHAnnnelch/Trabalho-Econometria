@@ -3,9 +3,9 @@ library(lmtest)
 library(corrplot)
 library(car)
 library(dplyr)
-df <- read.csv("04_df_compilado.csv")
+df <- read.csv("06_df_compilado_guiana.csv")
 
-modelo <- lm(CPIscore ~ scofree + stability + propr + govint + taxb + govspend + g_GDP + busfree + labfree + monfree + tradfree + investfree + finfree, data=df)
+modelo <- lm(CPIrank ~ scofree + stability + propr + govint + taxb + govspend + g_GDP + busfree + labfree + monfree + tradfree + investfree + finfree, data=df)
 summary(modelo)
 
 #R2 ajustado de 0.9291
