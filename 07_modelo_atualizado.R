@@ -1,16 +1,24 @@
+rm(list=ls())
+
 library(stats)
 library(lmtest)
 library(corrplot)
 library(car)
 library(dplyr)
+library(performance)
+
 df <- read.csv("06_df_compilado_guiana.csv")
 
-modelo <- lm(CPIrank ~ scofree + stability + propr + govint + taxb + govspend + g_GDP + busfree + labfree + monfree + tradfree + investfree + finfree, data=df)
+modelo <- lm(CPIscore ~ stability + propr + govint + taxb + govspend + g_GDP + busfree + labfree + monfree + tradfree + investfree + finfree, data=df)
 summary(modelo)
 
-#R2 ajustado de 0.9291
+model_performance(modelo)
 
-confint(modelo, level=0.95)
+png("check_model_output.png", width = 1920, height = 1080)
+check_model(modelo)
+dev.off()
+
+check_collinearity(modelo)
 
 #plot residuos
 plot(modelo$fitted.values, modelo$residuals,
@@ -34,3 +42,7 @@ vif(modelo) #scofree apresenta um valor alto de multicoli, mas isso faz sentido 
 qqnorm(modelo$residuals)
 qqline(modelo$residuals)
 #distribuição aparente normal, ou possível de se aproximar à normal
+
+#espaço para citações
+citation("performance")
+citation("corrplot")
