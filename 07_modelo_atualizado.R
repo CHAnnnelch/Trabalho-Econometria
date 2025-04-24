@@ -6,6 +6,7 @@ library(corrplot)
 library(car)
 library(dplyr)
 library(performance)
+library(tidyverse)
 
 df <- read.csv("06_df_compilado_guiana.csv")
 
@@ -31,31 +32,86 @@ png("check_model_output.png", width = 1920, height = 1080)
 check_model(modelo)
 dev.off()
 
+check_normality(modelo)
 check_collinearity(modelo)
 check_heteroscedasticity(modelo)
-
-#plot residuos
-plot(modelo$fitted.values, modelo$residuals,
-     xlab='Fitted', ylab='Residuais',
-     main='Plot dos Residuos')
-abline(0, 0)
+check_outliers(modelo)
 
 #matriz correlacao
 df_selected <- df %>% select(CPIscore, scofree, stability, propr, govint, taxb, govspend, g_GDP, busfree, labfree, monfree, tradfree, investfree, finfree, CPIrank)
 M = cor(df_selected)
+
+png("matriz_de_corr.png", width = 1920, height = 1080)
 corrplot(M, method='number', tl.cex = 0.8, number.cex = 0.8)
+dev.off()
 
 #testes
 dwtest(modelo) #a autocorrelação existe RLS.4 é
 
-bptest(modelo) #p-valor 0.1001 - n rejeita hipotese nula, n há evidencias de heteroscedasticidade
+# visualizar predicoes
+library(ggeffects)
+ggeffect(modelo)
 
-vif(modelo) #scofree apresenta um valor alto de multicoli, mas isso faz sentido já que essa variável é calculada com base nas demais do Economic Freedom Index
+plot_pred <- ggeffect(modelo) %>%
+  plot() %>%
+  sjPlot::plot_grid()
 
-#qqnorm e qqline
-qqnorm(modelo$residuals)
-qqline(modelo$residuals)
-#distribuição aparente normal, ou possível de se aproximar à normal
+plot_pred
+
+ggsave(
+  'plot_predicoes.png',
+  plot = plot_pred,
+  device = png,
+  dpi = 999,
+  width = 9,
+  height = 7
+)
+
+# tabelas
+library(gtsummary)
+tabela_pred <- tbl_regression(
+  modelo,
+  add_pairwise_contrasts = T,
+  pvalue_fun = ~style_pvalue(.x, digits = 3)) %>%
+  bold_p()
+
+#salvar tabela
+library(flextable)
+tabela_pred %>% 
+  as_flex_table() %>%
+  save_as_image(path =  "tabela_pred.png")
+
+#equacao da regressao
+library(equatiomatic)
+extract_eq(modelo)
+
+#mais coisas
+library(emmeans)
+library(sjPlot)
+library(effectsize)
+
+tab_model(modelo, show.intercept = F)
+
+ef_size <- eta_squared(modelo) %>%
+  mutate(Interpret = interpret_eta_squared(Eta2_partial))
+
+ef_size
+
+ef_size %>%
+  ggplot(aes(x= reorder(Parameter, Eta2_partial),
+             y= Eta2_partial))+
+  geom_bar(stat="identity")+
+  geom_text(aes(label=Interpret),
+            size = 4, hjust = -0.1, fontface = "bold")+
+  coord_flip()+
+  xlab("")+
+  ylim(0, .99)
+
+performance(modelo)
+
+interpret_r2(0.924, rules = "hair2011")
+
+?interpret_r2
 
 #transformação pra log
 CPIscore_log <- log(df$CPIscore)
@@ -89,18 +145,80 @@ modelo_log <- lm(CPIscore_log ~
 
 summary(modelo_log)
 
-#avaliação da performance
-model_performance(modelo_log)
-
 png("check_model_log_output.png", width = 1920, height = 1080)
 check_model(modelo_log)
 dev.off()
 
+check_normality(modelo_log)
+check_collinearity(modelo_log)
+check_heteroscedasticity(modelo_log)
+check_outliers(modelo_log)
+
 dwtest(modelo_log) #p-valor = 0.07117, RLS.4 potencialmente atendida
 
-check_collinearity(modelo_log) #multicoli alta
+# visualizar predicoes
+library(ggeffects)
+ggeffect(modelo_log)
 
-check_heteroscedasticity(modelo_log) #heteroscedasticidade detectada
+plot_pred <- ggeffect(modelo_log) %>%
+  plot() %>%
+  sjPlot::plot_grid()
 
-#modelo log performou pior do que o modelo convencional
-#possiveis saídas: regressão robusta/bootstrap/lasso sla
+plot_pred
+
+ggsave(
+  'plot_predicoes_log.png',
+  plot = plot_pred,
+  device = png,
+  dpi = 999,
+  width = 9,
+  height = 7
+)
+
+# tabelas
+library(gtsummary)
+tabela_pred <- tbl_regression(
+  modelo_log,
+  add_pairwise_contrasts = T,
+  pvalue_fun = ~style_pvalue(.x, digits = 3)) %>%
+  bold_p()
+
+#salvar tabela
+library(flextable)
+tabela_pred %>% 
+  as_flex_table() %>%
+  save_as_image(path =  "tabela_pred_log.png")
+
+#equacao da regressao
+library(equatiomatic)
+extract_eq(modelo_log)
+
+#mais coisas
+library(emmeans)
+library(sjPlot)
+library(effectsize)
+
+tab_model(modelo_log, show.intercept = F)
+
+ef_size <- eta_squared(modelo_log) %>%
+  mutate(Interpret = interpret_eta_squared(Eta2_partial))
+
+ef_size
+
+ef_size %>%
+  ggplot(aes(x= reorder(Parameter, Eta2_partial),
+             y= Eta2_partial))+
+  geom_bar(stat="identity")+
+  geom_text(aes(label=Interpret),
+            size = 4, hjust = -0.1, fontface = "bold")+
+  coord_flip()+
+  xlab("")+
+  ylim(0, .99)
+
+performance(modelo_log)
+
+interpret_r2(0.944, rules = "hair2011")
+
+?interpret_r2
+
+
