@@ -8,10 +8,14 @@ library(dplyr)
 library(performance)
 library(tidyverse)
 library(see)
+library(plm)
 
 df <- read.csv("06_df_compilado_guiana.csv")
 
-modelo <- lm(CPIscore ~ 
+df <- df %>%
+  mutate(ID_pais = group_indices(., Country))
+
+modelo <- plm(CPIscore ~ 
                stability +
                propr +
                govint +
@@ -24,19 +28,21 @@ modelo <- lm(CPIscore ~
                tradfree +
                investfree +
                finfree,
-             data=df)
+             data=df,
+             model='within',
+             index=c("ID_pais","Index.Year"))
 summary(modelo)
+
+#model = 'within' - modelo de efeito fixo
+
 
 model_performance(modelo)
 
 
 check_model(modelo)
 
-
-check_normality(modelo)
 check_collinearity(modelo)
 check_heteroscedasticity(modelo)
-check_outliers(modelo)
 
 #matriz correlacao
 df_selected <- df %>% select(CPIscore, scofree, stability, propr, govint, taxb, govspend, g_GDP, busfree, labfree, monfree, tradfree, investfree, finfree, CPIrank)
@@ -64,6 +70,8 @@ tabela_pred <- tbl_regression(
   add_pairwise_contrasts = T,
   pvalue_fun = ~style_pvalue(.x, digits = 3)) %>%
   bold_p()
+
+tabela_pred
 
 #salvar tabela
 library(flextable)
@@ -99,7 +107,7 @@ ef_size %>%
 
 performance(modelo)
 
-interpret_r2(0.924, rules = "hair2011")
+interpret_r2(0.262, rules = "hair2011")
 
 ?interpret_r2
 
