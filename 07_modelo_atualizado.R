@@ -7,6 +7,7 @@ library(car)
 library(dplyr)
 library(performance)
 library(tidyverse)
+library(see)
 
 df <- read.csv("06_df_compilado_guiana.csv")
 
@@ -28,9 +29,9 @@ summary(modelo)
 
 model_performance(modelo)
 
-png("check_model_output.png", width = 1920, height = 1080)
+
 check_model(modelo)
-dev.off()
+
 
 check_normality(modelo)
 check_collinearity(modelo)
@@ -41,9 +42,7 @@ check_outliers(modelo)
 df_selected <- df %>% select(CPIscore, scofree, stability, propr, govint, taxb, govspend, g_GDP, busfree, labfree, monfree, tradfree, investfree, finfree, CPIrank)
 M = cor(df_selected)
 
-png("matriz_de_corr.png", width = 1920, height = 1080)
 corrplot(M, method='number', tl.cex = 0.8, number.cex = 0.8)
-dev.off()
 
 #testes
 dwtest(modelo) #a autocorrelação existe RLS.4 é
@@ -57,15 +56,6 @@ plot_pred <- ggeffect(modelo) %>%
   sjPlot::plot_grid()
 
 plot_pred
-
-ggsave(
-  'plot_predicoes.png',
-  plot = plot_pred,
-  device = png,
-  dpi = 999,
-  width = 9,
-  height = 7
-)
 
 # tabelas
 library(gtsummary)
@@ -145,9 +135,7 @@ modelo_log <- lm(CPIscore_log ~
 
 summary(modelo_log)
 
-png("check_model_log_output.png", width = 1920, height = 1080)
 check_model(modelo_log)
-dev.off()
 
 check_normality(modelo_log)
 check_collinearity(modelo_log)
@@ -165,15 +153,6 @@ plot_pred <- ggeffect(modelo_log) %>%
   sjPlot::plot_grid()
 
 plot_pred
-
-ggsave(
-  'plot_predicoes_log.png',
-  plot = plot_pred,
-  device = png,
-  dpi = 999,
-  width = 9,
-  height = 7
-)
 
 # tabelas
 library(gtsummary)
@@ -221,4 +200,25 @@ interpret_r2(0.944, rules = "hair2011")
 
 ?interpret_r2
 
+#modelo random forest
+library(randomForest)
+library(vip)
 
+modelo_rf <- randomForest(CPIscore ~ 
+               stability +
+               propr +
+               govint +
+               taxb +
+               govspend +
+               g_GDP +
+               busfree +
+               labfree +
+               monfree +
+               tradfree +
+               investfree +
+               finfree,
+               data = df)
+
+modelo_rf
+
+vip(modelo_rf)
