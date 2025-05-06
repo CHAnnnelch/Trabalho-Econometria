@@ -9,6 +9,8 @@ library(performance)
 library(tidyverse)
 library(see)
 library(plm)
+library(stargazer)
+
 
 df <- read.csv("06_df_compilado_guiana.csv")
 
@@ -40,6 +42,16 @@ model_performance(modelo)
 
 
 check_model(modelo)
+
+fig_performance = plot(check_model(modelo))
+ggsave(filename = "plot_performance.jpg",
+       plot = fig_performance,
+       width = 15,
+       height = 10,
+       dpi = 500)
+
+#resultados do modelo em LaTeX
+stargazer(modelo, type="latex", no.space=TRUE, align=TRUE)
 
 check_collinearity(modelo)
 check_heteroscedasticity(modelo)
@@ -230,3 +242,6 @@ modelo_rf <- randomForest(CPIscore ~
 modelo_rf
 
 vip(modelo_rf)
+
+#espaço pra citações
+citation("performance")
