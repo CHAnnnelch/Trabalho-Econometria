@@ -55,6 +55,24 @@ modelo_red <- plm(CPIscore ~
               index=c("ID_pais","Index.Year"))
 summary(modelo_red)
 
+modelo_red_random <- plm(CPIscore ~ 
+                           taxb +
+                           govspend +
+                           g_GDP +
+                           busfree +
+                           labfree +
+                           monfree +
+                           tradfree +
+                           investfree +
+                           finfree,
+                         data=df,
+                         model='random',
+                         index=c("ID_pais","Index.Year"))
+
+phtest(modelo_red, modelo_red_random)
+
+resettest(modelo_red)
+
 model_performance(modelo_red)
 
 check_model(modelo_red)
@@ -91,6 +109,8 @@ model_performance(modelo_free)
 
 check_model(modelo_free)
 
+pdwtest(modelo_red)
+
 #model = 'within' - modelo de efeito fixo
 
 fig_performance = plot(check_model(modelo))
@@ -107,8 +127,12 @@ check_collinearity(modelo)
 check_heteroscedasticity(modelo)
 
 #matriz correlacao
-df_selected <- df %>% select(CPIscore, scofree, stability, propr, govint, taxb, govspend, g_GDP, busfree, labfree, monfree, tradfree, investfree, finfree, CPIrank)
+library(xtable)
+
+df_selected <- df %>% select(CPIscore, taxb, govspend, g_GDP, busfree, labfree, monfree, tradfree, investfree, finfree)
 M = cor(df_selected)
+
+xtable(M, caption="Matrix de Correlação", label="tab:matriz_corr")
 
 corrplot(M, method='number', tl.cex = 0.8, number.cex = 0.8)
 
@@ -120,12 +144,26 @@ extract_eq(modelo)
 library(emmeans)
 library(sjPlot)
 library(effectsize)
+library(vtable)
 
 tab_model(modelo, show.intercept = F)
 
 interpret_r2(0.262, rules = "hair2011")
 
 ?interpret_r2
+
+df_summary <- df %>% select(CPIscore, 
+                              taxb,
+                              govspend,
+                              g_GDP,
+                              busfree,
+                              labfree,
+                              monfree,
+                              tradfree,
+                              investfree,
+                              finfree)
+
+sumtable(df_summary, out='latex')
 
 #modelo random forest
 library(randomForest)
