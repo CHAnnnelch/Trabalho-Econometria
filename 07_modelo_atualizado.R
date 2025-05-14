@@ -77,6 +77,15 @@ model_performance(modelo_red)
 
 check_model(modelo_red)
 
+stargazer(modelo_red, type='latex', align=TRUE,
+          title="Resultados da regressão em painel", ci=TRUE,
+          ci.level=0.95, single.row=TRUE)
+
+summary(modelo_red)
+
+model_performance(modelo_red)
+
+
 #modelo com variáveis de gastos do governo
 modelo_gastos <- plm(CPIscore ~ 
                        taxb +
@@ -110,6 +119,8 @@ model_performance(modelo_free)
 check_model(modelo_free)
 
 pdwtest(modelo_red)
+
+compare_performance(modelo_red, modelo_red_random, modelo, modelo_gastos, modelo_free)
 
 #model = 'within' - modelo de efeito fixo
 
