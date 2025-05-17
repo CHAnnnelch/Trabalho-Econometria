@@ -77,13 +77,38 @@ model_performance(modelo_red)
 
 check_model(modelo_red)
 
-stargazer(modelo_red, type='latex', align=TRUE,
-          title="Resultados da regressão em painel", ci=TRUE,
-          ci.level=0.95, single.row=TRUE)
+#heteroscedasticidade
+
+bptest(modelo_red)
+
+check_heteroscedasticity(modelo_red)
+
+coef <- coeftest(modelo_red, vcov = vcovHC(modelo_red, type = "HC1", cluster = "group"))
+coef
+
+stargazer(modelo_red, coef, type='latex', align=TRUE,
+          title="Resultados da regressão em painel", single.row=TRUE)
 
 summary(modelo_red)
 
 model_performance(modelo_red)
+
+#linearidade 
+
+res <- modelo_red$residuals
+fitted_vals <- fitted(modelo_red)
+
+ggplot(data.frame(res, fitted_vals), aes(x = fitted_vals, y = res)) +
+  geom_point() +
+  geom_smooth(se = TRUE, method = "loess", color = "green") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(x = "Fitted values", y = "Residuals")
+
+#normalidade dos resíduos
+media_res <- mean(res)
+dp_res <- sd(res)
+
+ks.test(res, "pnorm", mean = media_res, sd = dp_res)
 
 
 #modelo com variáveis de gastos do governo
