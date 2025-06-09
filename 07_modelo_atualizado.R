@@ -1,5 +1,7 @@
+#limpando o ambiente de trabalho
 rm(list=ls())
 
+#importando bibliotecas
 library(stats)
 library(lmtest)
 library(corrplot)
@@ -13,33 +15,11 @@ library(stargazer)
 
 df <- read.csv("06_df_compilado_guiana.csv")
 
+#criação da coluna ID dos países
 df <- df %>%
   mutate(ID_pais = group_indices(., Country))
 
-#modelo completo
-modelo <- plm(CPIscore ~ 
-               stability +
-               propr +
-               govint +
-               taxb +
-               govspend +
-               g_GDP +
-               busfree +
-               labfree +
-               monfree +
-               tradfree +
-               investfree +
-               finfree,
-             data=df,
-             model='within',
-             index=c("ID_pais","Index.Year"))
-summary(modelo)
-
-model_performance(modelo)
-
-check_model(modelo)
-
-#modelo reduzido com variávies de gasto e liberadade
+#modelo com efeito fixo
 modelo_red <- plm(CPIscore ~ 
                 taxb +
                 govspend +
@@ -55,6 +35,7 @@ modelo_red <- plm(CPIscore ~
               index=c("ID_pais","Index.Year"))
 summary(modelo_red)
 
+#modelo com efeito aleatório
 modelo_red_random <- plm(CPIscore ~ 
                            taxb +
                            govspend +
@@ -69,10 +50,10 @@ modelo_red_random <- plm(CPIscore ~
                          model='random',
                          index=c("ID_pais","Index.Year"))
 
+#teste de hausman
 phtest(modelo_red, modelo_red_random)
 
-resettest(modelo_red)
-
+#performance
 model_performance(modelo_red)
 
 check_model(modelo_red)
@@ -81,20 +62,20 @@ check_model(modelo_red)
 
 bptest(modelo_red)
 
-check_heteroscedasticity(modelo_red)
+#autocorrelação
 
-coef <- coeftest(modelo_red, vcov = vcovHC(modelo_red, type = "HC1", cluster = "group"))
+pdwtest(modelo_red)
+
+#correção dos coeficientes (heteroscedasticidade e autocorrelação) =usando uma matriz robusta
+coef <- coeftest(modelo_red, vcov = vcovSCC(modelo_red, type = "HC1"))
 coef
 
+#importação automática para LaTeX
 stargazer(modelo_red, coef, type='latex', align=TRUE,
           title="Resultados da regressão em painel", single.row=TRUE)
 
-summary(modelo_red)
-
-model_performance(modelo_red)
-
 #linearidade 
-
+#plot dos resíduos
 res <- modelo_red$residuals
 fitted_vals <- fitted(modelo_red)
 
@@ -108,59 +89,8 @@ ggplot(data.frame(res, fitted_vals), aes(x = fitted_vals, y = res)) +
 media_res <- mean(res)
 dp_res <- sd(res)
 
+#teste de kolmogorov-smirnov
 ks.test(res, "pnorm", mean = media_res, sd = dp_res)
-
-
-#modelo com variáveis de gastos do governo
-modelo_gastos <- plm(CPIscore ~ 
-                       taxb +
-                       govspend +
-                       g_GDP,
-                     data=df,
-                     model='within',
-                     index=c("ID_pais","Index.Year"))
-summary(modelo_gastos)
-
-model_performance(modelo_gastos)
-
-check_model(modelo_gastos)
-
-
-#modelo reduzido com variávies de liberdade
-modelo_free <- plm(CPIscore ~ 
-                    busfree +
-                    labfree +
-                    monfree +
-                    tradfree +
-                    investfree +
-                    finfree,
-                  data=df,
-                  model='within',
-                  index=c("ID_pais","Index.Year"))
-summary(modelo_free)
-
-model_performance(modelo_free)
-
-check_model(modelo_free)
-
-pdwtest(modelo_red)
-
-compare_performance(modelo_red, modelo_red_random, modelo, modelo_gastos, modelo_free)
-
-#model = 'within' - modelo de efeito fixo
-
-fig_performance = plot(check_model(modelo))
-ggsave(filename = "plot_performance.jpg",
-       plot = fig_performance,
-       width = 15,
-       height = 10,
-       dpi = 500)
-
-#resultados do modelo em LaTeX
-stargazer(modelo, type="latex", no.space=TRUE, align=TRUE)
-
-check_collinearity(modelo)
-check_heteroscedasticity(modelo)
 
 #matriz correlacao
 library(xtable)
@@ -168,7 +98,7 @@ library(xtable)
 df_selected <- df %>% select(CPIscore, taxb, govspend, g_GDP, busfree, labfree, monfree, tradfree, investfree, finfree)
 M = cor(df_selected)
 
-xtable(M, caption="Matrix de Correlação", label="tab:matriz_corr")
+xtable(M, caption="Matriz de Correlação", label="tab:matriz_corr")
 
 corrplot(M, method='number', tl.cex = 0.8, number.cex = 0.8)
 
@@ -176,18 +106,12 @@ corrplot(M, method='number', tl.cex = 0.8, number.cex = 0.8)
 library(equatiomatic)
 extract_eq(modelo)
 
-#mais coisas
-library(emmeans)
-library(sjPlot)
+#interpretação r2
 library(effectsize)
-library(vtable)
 
-tab_model(modelo, show.intercept = F)
+interpret_r2(0.237, rules = "cohen1988")
 
-interpret_r2(0.262, rules = "hair2011")
-
-?interpret_r2
-
+#estatísticas descritivas
 df_summary <- df %>% select(CPIscore, 
                               taxb,
                               govspend,
@@ -200,29 +124,3 @@ df_summary <- df %>% select(CPIscore,
                               finfree)
 
 sumtable(df_summary, out='latex')
-
-#modelo random forest
-library(randomForest)
-library(vip)
-
-modelo_rf <- randomForest(CPIscore ~ 
-               stability +
-               propr +
-               govint +
-               taxb +
-               govspend +
-               g_GDP +
-               busfree +
-               labfree +
-               monfree +
-               tradfree +
-               investfree +
-               finfree,
-               data = df)
-
-modelo_rf
-
-vip(modelo_rf)
-
-#espaço pra citações
-citation("performance")
